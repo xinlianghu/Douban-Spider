@@ -27,18 +27,20 @@ class BasicInfo(object):
         self.alias = ''
         self.year = ''
         self.num = '0'
+        self.tag = ''
         try:
-            self.id = info['index']
-            self.name = info['名字']
-            self.director = info['导演']
-            self.country = info['制片国家/地区']
-            self.tscore = info['总评分']
-            self.staring = info['主演']
-            self.language = info['语言']
-            self.year = info['出品时间']
-            self.type = info['类型']
-            self.alias = info['又名']
-            self.num = info['评分人数']
+            self.id = info['索引'].replace(' / ','/').strip()
+            self.tag = info['类别'].replace(' / ','/').strip()
+            self.name = info['名字'].replace(' / ','/').strip()
+            self.director = info['导演'].replace(' / ','/').strip()
+            self.country = info['制片国家/地区'].replace(' / ','/').strip()
+            self.tscore = info['总评分'].replace(' / ','/').strip()
+            self.staring = info['主演'].replace(' / ','/').strip()
+            self.language = info['语言'].replace(' / ','/').strip()
+            self.year = info['出品时间'].replace(' / ','/').strip()
+            self.type = info['类型'].replace(' / ','/').strip()
+            self.alias = info['又名'].replace(' / ','/').strip()
+            self.num = info['评分人数'].replace(' / ','/').strip()
         except:
             pass
             #raise InfoError(e.message +'信息格式错误,无法正确解析')
@@ -47,6 +49,7 @@ class BasicInfo(object):
         info = ""
         info += "索引:%s\n" % self.id
         info += "名字:%s\n" % self.name
+        info += "分类:%s\n" % self.tag
         info += "导演:%s\n" % self.director
         info += "主演:%s\n" % self.staring
         info += "总评分:%s分\n" % self.tscore
@@ -68,6 +71,7 @@ def create_table(db,cursor):
     CREATE TABLE IF NOT EXISTS movie_info (
     id INT  NOT NULL AUTO_INCREMENT,
 	name VARCHAR(256) NOT NULL,
+	tag VARCHAR(10) NOT NULL,
 	director VARCHAR(256) NOT NULL,
 	country VARCHAR(256) NOT NULL,
 	tscore VARCHAR(10) NOT NULL,
@@ -96,10 +100,10 @@ def save(db,cursor,movieInfo):
     value = ''
     valueList = filed.values()
     for i in valueList:
-        if isinstance(i,int):
-            value +=  str(i)  + ','
         if isinstance(i,str):
-            value +=  '\"' + i.strip() + '\"' + ','
+            value +=  '\"' + i.replace(' ','') + '\"' + ','
+        else:
+            value += str(i) + ','
     value = value[:-1]
     INSERT = "INSERT INTO movie_info ( %s ) VALUES( %s )" %(key,value)
     print INSERT
