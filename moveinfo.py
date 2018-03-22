@@ -101,7 +101,7 @@ def save(db,cursor,movieInfo):
     valueList = filed.values()
     for i in valueList:
         if isinstance(i,str):
-            value +=  '\"' + i.replace(' ','') + '\"' + ','
+            value +=  '\"' + i + '\"' + ','
         else:
             value += str(i) + ','
     value = value[:-1]
@@ -114,35 +114,6 @@ def save(db,cursor,movieInfo):
     except Exception as e:
         print e
         db.rollback()
-'''
-def test():
-    db,cursor = init_database()
-    #create_table(db,cursor)
-    #save(cursor,BasicInfo(None))
-    cursor.execute("select * from movie_info")
-    f = cursor.fetchall()
-    for i in f:
-        print f
-    db.close()
-test()
-'''
 
-import urllib2
-import zlib
-def getProxy():
-    httpproxy_handler = urllib2.ProxyHandler({"anonymous": "61.135.217.7:8080"})
-    opener = urllib2.build_opener(httpproxy_handler)
-    request = urllib2.Request("http://www.baidu.com/")
 
-    # 使用opener.open()方法发送请求才使用自定义的代理，而urlopen()则不使用自定义代理。
-    response = opener.open(request)
-    html = response.read()
-    # 就是将opener应用到全局，之后所有的，不管是opener.open()还是urlopen() 发送请求，都将使用自定义代理。
-    # urllib2.install_opener(opener)
-    # response = urlopen(request)
-    if response.headers['Content-Encoding'] == 'gzip':
-        html = zlib.decompress(html,16+zlib.MAX_WBITS)
-    print html
-
-#getProxy()
 
