@@ -151,7 +151,7 @@ def delay_time(t):
     time.sleep(delay)
 
 def getProxyPool():
-    url = 'http://www.xicidaili.com/nn'
+    url = 'http://www.xicidaili.com/wn'
     header = req_headers.copy()
     header['Host'] ='www.xicidaili.com'
     request = urllib2.Request(url ,headers=header)
@@ -165,9 +165,13 @@ def getProxyPool():
     proxy = []
     for i in range(1,num):
         tds = trs[i].find_all('td')
-        if str(tds[5].get_text()) == 'HTTP':
+        if str(tds[4].get_text()) == '高匿':
             proxy.append({str(tds[5].get_text()).lower():str(tds[1].get_text()+':'+tds[2].get_text())})
-    return proxy
+    result = [{}]
+    for i in proxy:
+        if proxyCheck(i):
+            result.append(i)
+    return result
 
 def selectProxy(proxyPool):
     num = len(proxyPool)
@@ -182,15 +186,20 @@ def proxyCheck(proxy):
     try:
         response = opener.open(request,timeout=3)
     except:
+        print 'invalid',proxy
         return False
     else:
+        print 'valid', proxy
         return True
 
 def getProxyFromPool(proxyPool):
     proxy = selectProxy(proxyPool)
+    i = 0
     while not proxyCheck(proxy):
+        if i > len(proxyPool) * 2:
+            proxyPool = getProxyFromPool()
         proxy = selectProxy(proxyPool)
-    return proxy
+    return proxy,proxyPool
 
 def selectUserAgent():
     num = len(UserAgent)
@@ -202,16 +211,17 @@ def printInfo(movieinfo):
         print key,movieinfo[key]
 
 
-def runSpider(tag = ['电影'],startPage = 0,Pagenum = 100,size = 100):
+def runSpider(tag = ['电影'],startPage = 0,Pagenum = 100,size = 1000):
     tag = ['电影']
     pageSize = 20
     urllist = []
     counter = 0
+    #proxyPool = getProxyPool()
     for i in range(0,len(tag)):
         for j in range(startPage,Pagenum):
-            proxyPool = getProxyPool()
-            proxy = getProxyFromPool(proxyPool)
-            print 'current proxy:',proxy
+            #proxy,proxyPool = getProxyFromPool(proxyPool)
+            #print 'current proxy:',proxy
+            proxy = {}
             url = "https://movie.douban.com/j/new_search_subjects?sort=T&range=0,10&tags=%s&start=%d"%(tag[i],j*pageSize)
             print 'grab Tag:%s Page:%d' %(tag[i],j*pageSize)
             httpproxy_handler = urllib2.ProxyHandler(proxy)
@@ -232,6 +242,8 @@ def runSpider(tag = ['电影'],startPage = 0,Pagenum = 100,size = 100):
                 print e
                 continue
 
+def main():
+    runSpider()
 
-
-runSpider()
+if __name__ =='__main__':
+    sys.exit(main())
