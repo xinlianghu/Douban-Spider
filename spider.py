@@ -19,7 +19,7 @@ req_headers = {
             'Accept-Language': 'zh,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
             'Accept-Encoding': 'gzip,deflate',
             #'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
+            #'Upgrade-Insecure-Requests': '1'
             }
 UserAgent = ["Mozilla/5.0(X11;Ubuntu;Linux x86_64;rv:58.0) Gecko/20100101 Firefox/58.0",
              "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
@@ -58,6 +58,7 @@ UserAgent = ["Mozilla/5.0(X11;Ubuntu;Linux x86_64;rv:58.0) Gecko/20100101 Firefo
              "Mozilla/5.0 (X11; U; Linux x86_64; zh-CN; rv:1.9.2.10) Gecko/20100922 Ubuntu/10.10 (maverick) Firefox/3.6.10",
              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
              ]
+proxyPool = []
 def getHTML(proxy,url):
     url = url
     httpproxy_handler = urllib2.ProxyHandler(proxy)
@@ -67,7 +68,7 @@ def getHTML(proxy,url):
     request = urllib2.Request(url,headers=header)
     response = None
     try:
-        response = opener.open(request)
+        response = opener.open(request,timeout = 3)
     except urllib2.URLError as e:
         errorcode = None
         reason = None
@@ -120,9 +121,12 @@ def getMovieInfo(html):
     return movieInfo
 
 def grabInfo(urlList,proxy):
+    global proxyPool
     db,cursor = init_database()
     create_table(db,cursor)
-    for item in urlList:
+    i = 0
+    while i < len(urlList):
+        item = urlList[i]
         movieinfo = None
         url = item['url']
         id = item['id']
@@ -131,7 +135,12 @@ def grabInfo(urlList,proxy):
         html ,errorcode,reason= getHTML(proxy,url)
         if html == None:
             print 'Get HTML from %s failed! ' % url,'Error code:',errorcode,'reason:',reason
+            if errorcode == 404:
+                i +=1
+            else:
+                proxy, proxyPool = getProxyFromPool()
             continue
+        i += 1
         print 'Get HTML from %s success!'% url
         try:
             movieinfo = getMovieInfo(html)
@@ -140,10 +149,10 @@ def grabInfo(urlList,proxy):
             movieinfo['名字'] = name
             print BasicInfo(movieinfo)
             save(db,cursor,BasicInfo(movieinfo))
+            delay_time(2)
         except Exception as e:
             print e
             continue
-        delay_time(3)
     db.close()
 
 def delay_time(t):
@@ -151,31 +160,42 @@ def delay_time(t):
     time.sleep(delay)
 
 def getProxyPool():
-    url = 'http://www.xicidaili.com/wn'
-    header = req_headers.copy()
-    header['Host'] ='www.xicidaili.com'
-    request = urllib2.Request(url ,headers=header)
-    response = urllib2.urlopen(request)
-    html = response.read()
-    if response.headers['Content-Encoding'] == 'gzip':
-        html = zlib.decompress(html,16+zlib.MAX_WBITS)
-    soup = BeautifulSoup(html, 'lxml')
-    trs = soup.find('table',id="ip_list").find_all('tr')
-    num = len(trs)
-    proxy = []
-    for i in range(1,num):
-        tds = trs[i].find_all('td')
-        if str(tds[4].get_text()) == '高匿':
-            proxy.append({str(tds[5].get_text()).lower():str(tds[1].get_text()+':'+tds[2].get_text())})
-    result = [{}]
-    for i in proxy:
-        if proxyCheck(i):
-            result.append(i)
+    result = []
+    for index in range(0,2):
+        if index == 0:
+            url = 'http://www.xicidaili.com/wn/'
+        else:
+            url = 'http://www.xicidaili.com/wn/%d'%(index)
+        header = req_headers.copy()
+        header['Host'] ='www.xicidaili.com'
+        request = urllib2.Request(url ,headers=header)
+        try:
+            response = urllib2.urlopen(request)
+            html = response.read()
+        except Exception as e:
+            print e
+            continue
+        if response.headers['Content-Encoding'] == 'gzip':
+            html = zlib.decompress(html,16+zlib.MAX_WBITS)
+        soup = BeautifulSoup(html, 'lxml')
+        trs = soup.find('table',id="ip_list").find_all('tr')
+        num = len(trs)
+        proxy = []
+        for i in range(1,num):
+            tds = trs[i].find_all('td')
+            if str(tds[4].get_text()) == '高匿':
+                proxy.append({str(tds[5].get_text()).lower():str(tds[5].get_text()).lower()+'://'+str(tds[1].get_text()+':'+tds[2].get_text())})
+        for i in proxy:
+            if proxyCheck(i):
+                result.append(i)
+    print 'proxy pool:',result
     return result
 
-def selectProxy(proxyPool):
+def selectProxy():
+    global proxyPool
     num = len(proxyPool)
     index = int(random.uniform(0,num))
+    print 'index',index
     return proxyPool[index]
 
 def proxyCheck(proxy):
@@ -185,20 +205,23 @@ def proxyCheck(proxy):
     request = urllib2.Request("https://www.baidu.com")
     try:
         response = opener.open(request,timeout=3)
+        response.read()
     except:
-        print 'invalid',proxy
         return False
     else:
-        print 'valid', proxy
         return True
 
-def getProxyFromPool(proxyPool):
-    proxy = selectProxy(proxyPool)
+def getProxyFromPool():
+    global proxyPool
+    proxy = selectProxy()
     i = 0
     while not proxyCheck(proxy):
         if i > len(proxyPool) * 2:
-            proxyPool = getProxyFromPool()
-        proxy = selectProxy(proxyPool)
+            proxyPool = getProxyPool()
+            print 'get new proxyPool',proxyPool
+        i = i+1
+        proxy = selectProxy()
+    print 'getProxyFromPool: select proxy:',proxy
     return proxy,proxyPool
 
 def selectUserAgent():
@@ -211,39 +234,53 @@ def printInfo(movieinfo):
         print key,movieinfo[key]
 
 
-def runSpider(tag = ['电影'],startPage = 0,Pagenum = 100,size = 1000):
+def runSpider(tag = ['电影'],startPage = 0,Pagenum = 200,size = 100):
     tag = ['电影']
     pageSize = 20
     urllist = []
     counter = 0
-    #proxyPool = getProxyPool()
+    global  proxyPool
+    proxyPool = getProxyPool()
+    proxy, proxyPool = getProxyFromPool()
+    j = startPage
     for i in range(0,len(tag)):
-        for j in range(startPage,Pagenum):
-            #proxy,proxyPool = getProxyFromPool(proxyPool)
-            #print 'current proxy:',proxy
-            proxy = {}
+        while j <= Pagenum:
+            #proxy = {'https':'123.56.223.224:6666'}
+            print 'current proxy:',proxy
             url = "https://movie.douban.com/j/new_search_subjects?sort=T&range=0,10&tags=%s&start=%d"%(tag[i],j*pageSize)
-            print 'grab Tag:%s Page:%d' %(tag[i],j*pageSize)
             httpproxy_handler = urllib2.ProxyHandler(proxy)
             opener = urllib2.build_opener(httpproxy_handler)
             request = urllib2.Request(url)
             try:
-                response = opener.open(request)
+                response = opener.open(request,timeout=3)
                 data = response.read()
+                print 'grab succes Tag:%s Page:%d' % (tag[i], j * pageSize)
                 data = json.loads(data)
                 for k in data['data']:
                     urllist.append({'id':str(k['id']),'url':str(k['url']),'tag':tag[i],'name':str(k['title'])})
+                    print k['url']
                     counter += 1
                     if counter % size == 0:
                         grabInfo(urllist,proxy)
+                        proxy, proxyPool = getProxyFromPool()
+                        print 'select proxy:',proxy
                         urllist = []
-                        delay_time(10)
+                j +=1
+                delay_time(2)
+            except urllib2.URLError as e:
+                if hasattr(e, 'code') and e.code == 404:
+                    i +=1
+                delay_time(1)
+                proxy, proxyPool = getProxyFromPool()
+                continue
             except Exception as e:
                 print e
+                proxy, proxyPool = getProxyFromPool()
+                delay_time(1)
                 continue
 
 def main():
-    runSpider()
+    runSpider(startPage=98)
 
 if __name__ =='__main__':
     sys.exit(main())
