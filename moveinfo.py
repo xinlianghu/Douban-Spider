@@ -16,31 +16,22 @@ class InfoError(Exception):
 
 class BasicInfo(object):
     def __init__(self,info ):
-        self.id = 0
-        self.name = ''
-        self.director = ''
-        self.country = ''
-        self.tscore = '0'
-        self.staring = ''
-        self.language = ''
-        self.type = ''
-        self.alias = ''
-        self.year = ''
-        self.num = '0'
-        self.tag = ''
         try:
-            self.id = info['索引'].replace(' / ','/').strip()
-            self.tag = info['类别'].replace(' / ','/').strip()
-            self.name = info['名字'].replace(' / ','/').strip()
-            self.director = info['导演'].replace(' / ','/').strip()
-            self.country = info['制片国家/地区'].replace(' / ','/').strip()
-            self.tscore = info['总评分'].replace(' / ','/').strip()
-            self.staring = info['主演'].replace(' / ','/').strip()
-            self.language = info['语言'].replace(' / ','/').strip()
-            self.year = info['出品时间'].replace(' / ','/').strip()
-            self.type = info['类型'].replace(' / ','/').strip()
-            self.alias = info['又名'].replace(' / ','/').strip()
-            self.num = info['评分人数'].replace(' / ','/').strip()
+            self.id = info.get('索引','0').replace(' / ','/').strip()
+            self.tag = info.get('类别','').replace(' / ','/').strip()
+            self.name = info.get('名字','').replace(' / ','/').strip()
+            self.director = info.get('导演','').replace(' / ','/').strip()
+            self.country = info.get('制片国家/地区','').replace(' / ','/').strip()
+            self.tscore = info.get('总评分','0').replace(' / ','/').strip()
+            self.staring = info.get('主演','').replace(' / ','/').strip()
+            self.language = info.get('语言','').replace(' / ','/').strip()
+            self.year = info.get('出品时间','').replace(' / ','/').strip()
+            self.type = info.get('类型','').replace(' / ','/').strip()
+            self.alias = info.get('又名','').replace(' / ','/').strip()
+            self.num = info.get('评分人数','0').replace(' / ','/').strip()
+            self.screenwriter= info.get('编剧','').replace(' / ','/').strip()
+            self.duration = info.get('片长','').replace(' / ','/').strip()
+            self.realease_date = info.get('上映日期', '').replace(' / ', '/').strip()
         except:
             pass
             #raise InfoError(e.message +'信息格式错误,无法正确解析')
@@ -59,6 +50,9 @@ class BasicInfo(object):
         info += "类型:%s\n" % self.type
         info += "出品时间:%s\n" % self.year
         info += "又名:%s\n" % self.alias
+        info += "编剧:%s\n" % self.screenwriter
+        info += "片长:%s\n" % self.duration
+        info += "上映日期:%s\n" % self.realease_date
         return info
 
 def init_database():
@@ -71,6 +65,7 @@ def create_table(db,cursor):
     CREATE TABLE IF NOT EXISTS movie_info (
     id INT  NOT NULL AUTO_INCREMENT,
 	name VARCHAR(256) NOT NULL,
+	screenwriter VARCHAR(128) NOT NULL,
 	tag VARCHAR(10) NOT NULL,
 	director VARCHAR(256) NOT NULL,
 	country VARCHAR(256) NOT NULL,
@@ -80,6 +75,8 @@ def create_table(db,cursor):
 	language VARCHAR(40) NOT NULL,
 	year VARCHAR(20) NOT NULL,
 	type VARCHAR(256) NOT NULL,
+	duration VARCHAR(128) NOT NULL,
+	realease_date VARCHAR(128) NOT NULL,
 	alias VARCHAR(256) NOT NULL,
 	PRIMARY KEY(id)
 	) default charset=utf8;

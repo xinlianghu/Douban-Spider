@@ -202,7 +202,7 @@ def proxyCheck(proxy):
 
     httpproxy_handler = urllib2.ProxyHandler(proxy)
     opener = urllib2.build_opener(httpproxy_handler)
-    request = urllib2.Request("https://www.baidu.com")
+    request = urllib2.Request("https://movie.douban.com")
     try:
         response = opener.open(request,timeout=3)
         response.read()
@@ -234,7 +234,7 @@ def printInfo(movieinfo):
         print key,movieinfo[key]
 
 
-def runSpider(tag = ['电影'],startPage = 0,Pagenum = 200,size = 100):
+def runSpider(tag = ['电影'],startPage = 0,Pagenum = 1000,size = 100):
     tag = ['电影']
     pageSize = 20
     urllist = []
@@ -254,7 +254,7 @@ def runSpider(tag = ['电影'],startPage = 0,Pagenum = 200,size = 100):
             try:
                 response = opener.open(request,timeout=3)
                 data = response.read()
-                print 'grab succes Tag:%s Page:%d' % (tag[i], j * pageSize)
+                print 'grab succes Tag:%s Page:%d' % (tag[i], j)
                 data = json.loads(data)
                 for k in data['data']:
                     urllist.append({'id':str(k['id']),'url':str(k['url']),'tag':tag[i],'name':str(k['title'])})
@@ -280,7 +280,7 @@ def runSpider(tag = ['电影'],startPage = 0,Pagenum = 200,size = 100):
                 continue
 
 def main():
-    runSpider(startPage=98)
+    runSpider()
 
 if __name__ =='__main__':
     sys.exit(main())
